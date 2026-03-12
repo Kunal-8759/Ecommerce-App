@@ -2,6 +2,7 @@ package com.ecommerce.ecommerce_backend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -16,48 +17,34 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ecommerce.ecommerce_backend.dto.AuthRequest;
-import com.ecommerce.ecommerce_backend.dto.AuthResponse;
-import com.ecommerce.ecommerce_backend.dto.RegisterRequestDTO;
-import com.ecommerce.ecommerce_backend.dto.UserRequestDTO;
-import com.ecommerce.ecommerce_backend.dto.UserResponseDTO;
+import com.ecommerce.ecommerce_backend.dto.request.LoginRequestDTO;
+import com.ecommerce.ecommerce_backend.dto.request.RegisterRequestDTO;
+import com.ecommerce.ecommerce_backend.dto.request.UpdateUserRequestDTO;
+import com.ecommerce.ecommerce_backend.dto.response.AuthResponseDTO;
+import com.ecommerce.ecommerce_backend.dto.response.UserResponseDTO;
 import com.ecommerce.ecommerce_backend.entity.Role;
 import com.ecommerce.ecommerce_backend.entity.User;
 import com.ecommerce.ecommerce_backend.service.UserService;
-import com.ecommerce.ecommerce_backend.utils.JwtUtils;
+import com.ecommerce.ecommerce_backend.utils.JwtUtil;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
-public class AuthController {
+public class UserController {
     
     @Autowired
     private UserService userService;
 
-    @Autowired
-    private JwtUtils jwtUtils;
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
     @PostMapping("/register")
-    public ResponseEntity<UserResponseDTO> register(@RequestBody RegisterRequestDTO registerRequest) {
+    public ResponseEntity<UserResponseDTO> register(@Valid @RequestBody RegisterRequestDTO registerRequest) {
         return ResponseEntity.ok(userService.registerUser(registerRequest));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest authRequest) {
-        // Use AuthenticationManager to verify credentials
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(authRequest.getEmail(), authRequest.getPassword())
-        );
-
-        if (authentication.isAuthenticated()) {
-            User user = userService.findByEmail(authRequest.getEmail());
-            String token = jwtUtils.generateToken(user.getEmail());
-            return ResponseEntity.ok(new AuthResponse(token, user.getEmail(), user.getRole().name()));
-        } else {
-            throw new RuntimeException("Invalid authentication request");
-        }
+    public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO authRequest) {
+        AuthResponseDTO response = userService.login(authRequest);
+        return ResponseEntity.ok(response);    
     }
 
     // Get User Profile by ID
@@ -68,18 +55,19 @@ public class AuthController {
 
     // Update User Profile (Name/Email/Password)
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Long id, @RequestBody UserRequestDTO userDTO) {
+    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Long id,@Valid @RequestBody UpdateUserRequestDTO userDTO) {
         return ResponseEntity.ok(userService.updateUser(id, userDTO));
     }
 
-    // Update User Role (Admin only)
-    @PatchMapping("/{id}/role")
-    public ResponseEntity<UserResponseDTO> updateRole(@PathVariable Long id, @RequestParam Role role) {
-        return ResponseEntity.ok(userService.updateUserRole(id, role));
-    }
+    // // Update User Role (Admin only)
+    // @PatchMapping("/{id}/role")
+    // public ResponseEntity<UserResponseDTO> updateRole(@PathVariable Long id, @RequestParam Role role) {
+    //     return ResponseEntity.ok(userService.updateUserRole(id, role));
+    // }
 
     // Delete User
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();

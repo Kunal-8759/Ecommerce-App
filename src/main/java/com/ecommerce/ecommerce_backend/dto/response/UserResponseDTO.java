@@ -1,6 +1,7 @@
-package com.ecommerce.ecommerce_backend.dto;
+package com.ecommerce.ecommerce_backend.dto.response;
 
-import javax.management.relation.Role;
+
+import com.ecommerce.ecommerce_backend.entity.Role;
 
 import lombok.Data;
 

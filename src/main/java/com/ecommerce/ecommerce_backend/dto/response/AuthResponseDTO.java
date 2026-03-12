@@ -1,13 +1,11 @@
-package com.ecommerce.ecommerce_backend.dto;
+package com.ecommerce.ecommerce_backend.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
+public class AuthResponseDTO {
     private String token;
     private String email;
     private String role;
