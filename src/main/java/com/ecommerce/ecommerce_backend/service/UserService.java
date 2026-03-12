@@ -1,7 +1,12 @@
 package com.ecommerce.ecommerce_backend.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -21,7 +26,7 @@ import com.ecommerce.ecommerce_backend.repository.UserRepository;
 import com.ecommerce.ecommerce_backend.utils.JwtUtil;
 
 @Service
-public class UserService implements UserDetailsService {
+public class UserService {
 
     @Autowired
     private UserRepository userRepository;
@@ -32,44 +37,6 @@ public class UserService implements UserDetailsService {
     @Autowired
     private ModelMapper modelMapper;
 
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    public UserResponseDTO registerUser(RegisterRequestDTO request){
-        // Check if email already exists
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already registered: " + request.getEmail());
-        }
-
-        User user = new User();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.CUSTOMER); // default role : CUSTOMER
-
-        User savedUser = userRepository.save(user);
-        //convert entity to dto to hide in response
-        return modelMapper.map(savedUser , UserResponseDTO.class);
-    }
-
-    public AuthResponseDTO login(LoginRequestDTO request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "No account found with this email"));
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid password");
-        }
-
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        return new AuthResponseDTO(token, user.getEmail(), user.getRole().name());
-    }
-
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
-    }
 
     public UserResponseDTO getUserById(Long id) {
         User user = userRepository.findById(id)
@@ -94,15 +61,15 @@ public class UserService implements UserDetailsService {
         return modelMapper.map(user, UserResponseDTO.class);
     }
 
-    // // Update User Role (ADMIN ONLY logic)
-    // public UserResponseDTO updateUserRole(Long id, Role newRole) {
-    //     User user = userRepository.findById(id)
-    //             .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    // Update User Role (ADMIN ONLY logic)
+    public UserResponseDTO updateUserRole(Long id, Role newRole) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         
-    //     user.setRole(newRole);
-    //     User updatedUser = userRepository.save(user);
-    //     return modelMapper.map(updatedUser, UserResponseDTO.class);
-    // }
+        user.setRole(newRole);
+        User updatedUser = userRepository.save(user);
+        return modelMapper.map(updatedUser, UserResponseDTO.class);
+    }
 
     // Delete User
     public void deleteUser(Long id) {
@@ -110,6 +77,14 @@ public class UserService implements UserDetailsService {
             throw new ResourceNotFoundException("User not found with id: " + id);
         }
         userRepository.deleteById(id);
+    }
+
+    //get all users (admin only)
+    public List<UserResponseDTO> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        return users.stream()
+                .map(user -> modelMapper.map(user, UserResponseDTO.class))
+                .collect(Collectors.toList());
     }
 
 
