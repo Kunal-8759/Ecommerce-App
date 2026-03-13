@@ -16,6 +16,7 @@ import com.ecommerce.ecommerce_backend.entity.Cart;
 import com.ecommerce.ecommerce_backend.entity.CartItem;
 import com.ecommerce.ecommerce_backend.entity.Product;
 import com.ecommerce.ecommerce_backend.entity.User;
+import com.ecommerce.ecommerce_backend.exception.InsufficientStockException;
 import com.ecommerce.ecommerce_backend.exception.ResourceNotFoundException;
 import com.ecommerce.ecommerce_backend.repository.CartItemRepository;
 import com.ecommerce.ecommerce_backend.repository.CartRepository;
@@ -101,7 +102,7 @@ public class CartService {
 
         // Check stock availability before adding
         if (product.getStock() < request.getQuantity()) {
-            throw new RuntimeException("Insufficient stock. Available: " + product.getStock());
+            throw new InsufficientStockException("Insufficient stock for '" + product.getName() + "'. Available: " + product.getStock());
         }
 
         // If product already in cart → just increase quantity
@@ -115,7 +116,7 @@ public class CartService {
 
             // Re-check stock for the updated combined quantity
             if (product.getStock() < updatedQty) {
-                throw new RuntimeException("Insufficient stock. Available: " + product.getStock());
+                throw new InsufficientStockException("Cannot add more. Insufficient stock for '" + product.getName() + "'. Available: " + product.getStock());
             }
             cartItem.setQuantity(updatedQty);
         } else {
@@ -155,7 +156,7 @@ public class CartService {
 
         // Validate new quantity against stock
         if (product.getStock() < request.getQuantity()) {
-            throw new RuntimeException("Insufficient stock. Available: " + product.getStock());
+            throw new InsufficientStockException("Insufficient stock for '" + product.getName() + "'. Available: " + product.getStock());
         }
 
         cartItem.setQuantity(request.getQuantity());

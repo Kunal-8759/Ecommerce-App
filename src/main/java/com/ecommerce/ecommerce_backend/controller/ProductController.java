@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecommerce.ecommerce_backend.dto.request.ProductRequestDTO;
+import com.ecommerce.ecommerce_backend.dto.response.ApiResponse;
 import com.ecommerce.ecommerce_backend.dto.response.ProductResponseDTO;
 import com.ecommerce.ecommerce_backend.service.ProductService;
 
@@ -33,39 +34,43 @@ public class ProductController {
     // create Product(Admin only)
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductResponseDTO> createProduct(@Valid @RequestBody ProductRequestDTO request) {
+    public ResponseEntity<ApiResponse<ProductResponseDTO>> createProduct(@Valid @RequestBody ProductRequestDTO request) {
         ProductResponseDTO response = productService.createProduct(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                ApiResponse.success(HttpStatus.CREATED.value(), "Product created successfully", response));
     }
 
     // Update Product(Admin only)
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequestDTO request) {
+    public ResponseEntity<ApiResponse<ProductResponseDTO>> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequestDTO request) {
 
         ProductResponseDTO response = productService.updateProduct(id, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success(HttpStatus.OK.value(), "Product updated successfully", response));
     }
 
     // Delete Product(Admin only)
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
 
         productService.deleteProduct(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                ApiResponse.success(HttpStatus.OK.value(), "Product deleted successfully", null));
     }
 
     // get Product by ID (Public)
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<ProductResponseDTO>> getProductById(@PathVariable Long id) {
         ProductResponseDTO response = productService.getProductById(id);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success(HttpStatus.OK.value(), "Product fetched successfully", response));
     }
 
     // Get All Products with optional filters (Public)
     @GetMapping()
-    public ResponseEntity<Page<ProductResponseDTO>> getAllProducts(
+    public ResponseEntity<ApiResponse<Page<ProductResponseDTO>>> getAllProducts(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
@@ -76,7 +81,8 @@ public class ProductController {
 
         Page<ProductResponseDTO> products = productService.getAllProducts(
                 category, minPrice, maxPrice, page, size, sortBy, sortDir);
-        return ResponseEntity.ok(products);
+        return ResponseEntity.ok(
+                ApiResponse.success(HttpStatus.OK.value(), "Products fetched successfully", products));
     }
 
 }

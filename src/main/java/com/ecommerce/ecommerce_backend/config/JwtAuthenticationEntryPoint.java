@@ -9,9 +9,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
+
+import com.ecommerce.ecommerce_backend.dto.response.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.IOException;
 
@@ -19,20 +25,18 @@ import java.io.IOException;
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint{
     @Override
     public void commence(HttpServletRequest request,
-                         HttpServletResponse response,
-                         AuthenticationException authException) throws IOException, ServletException {
-        
-        // Set the response status to 401 Unauthorized
+                        HttpServletResponse response,
+                        AuthenticationException authException) throws IOException, ServletException {
+
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
-        
-        // You can customize this JSON structure to match your project's error format
-        String jsonResponse = String.format(
-                "{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"%s\", \"path\": \"%s\"}",
-                authException.getMessage(),
-                request.getServletPath()
-        );
 
-        response.getWriter().write(jsonResponse);
+        ApiResponse<Void> body = ApiResponse.error(
+                HttpStatus.UNAUTHORIZED.value(), "Access denied: no token provided or token is invalid");
+
+        // Use Jackson to serialize ApiResponse to JSON
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule()); 
+        response.getWriter().write(mapper.writeValueAsString(body));
     }
 }

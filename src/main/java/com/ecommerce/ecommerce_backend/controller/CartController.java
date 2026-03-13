@@ -1,6 +1,7 @@
 package com.ecommerce.ecommerce_backend.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ecommerce.ecommerce_backend.dto.request.AddToCartRequestDTO;
 import com.ecommerce.ecommerce_backend.dto.request.UpdateCartItemRequestDTO;
+import com.ecommerce.ecommerce_backend.dto.response.ApiResponse;
 import com.ecommerce.ecommerce_backend.dto.response.CartResponseDTO;
 import com.ecommerce.ecommerce_backend.service.CartService;
 
@@ -29,29 +31,33 @@ public class CartController {
 
     // Add a product to cart (or increase qty if already exists)
     @PostMapping("/add")
-    public ResponseEntity<CartResponseDTO> addToCart(@Valid @RequestBody AddToCartRequestDTO request) {
+    public ResponseEntity<ApiResponse<CartResponseDTO>> addToCart(@Valid @RequestBody AddToCartRequestDTO request) {
         CartResponseDTO response = cartService.addToCart(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success(HttpStatus.OK.value(), "Product added to cart successfully", response));
     }
 
     // Update quantity of a specific product in cart
     @PutMapping("/update/{productId}")
-    public ResponseEntity<CartResponseDTO> updateCartItem(@PathVariable Long productId,@Valid @RequestBody UpdateCartItemRequestDTO request) {
+    public ResponseEntity<ApiResponse<CartResponseDTO>> updateCartItem(@PathVariable Long productId,@Valid @RequestBody UpdateCartItemRequestDTO request) {
         CartResponseDTO response = cartService.updateCartItem(productId, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success(HttpStatus.OK.value(), "Cart item updated successfully", response));
     }
 
     // Remove a specific product from cart
     @DeleteMapping("/remove/{productId}")
-    public ResponseEntity<CartResponseDTO> removeFromCart(@PathVariable Long productId) {
+    public ResponseEntity<ApiResponse<CartResponseDTO>> removeFromCart(@PathVariable Long productId) {
         CartResponseDTO response = cartService.removeFromCart(productId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success(HttpStatus.OK.value(), "Product removed from cart successfully", response));
     }
 
     // View logged-in customer's cart with all items and total
     @GetMapping
-    public ResponseEntity<CartResponseDTO> getMyCart() {
+    public ResponseEntity<ApiResponse<CartResponseDTO>> getMyCart() {
         CartResponseDTO response = cartService.getMyCart();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                ApiResponse.success(HttpStatus.OK.value(), "Cart fetched successfully", response));
     }
 }
