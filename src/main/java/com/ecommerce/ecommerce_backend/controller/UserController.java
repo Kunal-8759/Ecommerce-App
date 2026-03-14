@@ -33,10 +33,14 @@ import com.ecommerce.ecommerce_backend.service.AuthService;
 import com.ecommerce.ecommerce_backend.service.UserService;
 import com.ecommerce.ecommerce_backend.utils.JwtUtil;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
+@Tag(name = "User Management", description = "APIs for user registration, login, profile management and admin user control")
 public class UserController {
 
     @Autowired
@@ -45,6 +49,7 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    @Operation(summary = "Register a new user",description = "Registers a new customer account. Role is automatically set to CUSTOMER.")
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponseDTO>> register(@Valid @RequestBody RegisterRequestDTO registerRequest) {
         UserResponseDTO data = authService.registerUser(registerRequest);
@@ -53,6 +58,7 @@ public class UserController {
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "User registered successfully", data));
     }
 
+    @Operation(summary = "Login",description = "Authenticates user and returns a JWT token. Use this token in the Authorize button above.")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponseDTO>> login(@Valid @RequestBody LoginRequestDTO authRequest) {
         AuthResponseDTO response = authService.login(authRequest);
@@ -60,6 +66,10 @@ public class UserController {
                 ApiResponse.success(HttpStatus.OK.value(), "Login successful", response));
     }
 
+
+    @Operation(summary = "Get user by ID",
+               description = "Fetch a user's profile. Customers can only fetch their own profile. Admins can fetch any.",
+               security = @SecurityRequirement(name = "BearerAuth"))
     // Get User Profile by ID
     @GetMapping("/{id}")
     @PreAuthorize("#id == authentication.principal.id or hasRole('ADMIN')") // Admin can access any profile, users can access their own profile
@@ -70,6 +80,9 @@ public class UserController {
     }
 
     // Update User Profile (Name/Password)
+    @Operation(summary = "Update user profile",
+               description = "Update name and/or password. Customers can only update their own profile.",
+               security = @SecurityRequirement(name = "BearerAuth"))
     @PutMapping("/{id}")
     @PreAuthorize("#id == authentication.principal.id or hasRole('ADMIN')") // Admin can update any profile, users can update their own profile
     public ResponseEntity<ApiResponse<UserResponseDTO>> updateUser(@PathVariable Long id,@Valid @RequestBody UpdateUserRequestDTO userDTO) {
@@ -79,6 +92,9 @@ public class UserController {
     }
 
     // Update User Role (Admin only)
+    @Operation(summary = "Update user role (Admin only)",
+               description = "Change a user's role to ADMIN or CUSTOMER.",
+               security = @SecurityRequirement(name = "BearerAuth"))
     @PatchMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')") // Only Admin can update roles
     public ResponseEntity<ApiResponse<UserResponseDTO>> updateRole(@PathVariable Long id, @RequestParam Role role) {
@@ -88,6 +104,9 @@ public class UserController {
     }
 
     // Delete User
+    @Operation(summary = "Delete user (Admin only)",
+               description = "Delete a user account. Only admins can perform this action.",
+               security = @SecurityRequirement(name = "BearerAuth"))
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
@@ -97,6 +116,9 @@ public class UserController {
     }
 
     //get all Users
+    @Operation(summary = "Get all users (Admin only)",
+                description = "Fetch a list of all users. Only admins can perform this action.",
+               security = @SecurityRequirement(name = "BearerAuth"))
     @GetMapping()
     public ResponseEntity<ApiResponse<List<UserResponseDTO>>> getAllUsers() {
         return ResponseEntity.ok(

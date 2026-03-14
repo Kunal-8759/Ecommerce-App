@@ -65,7 +65,14 @@ public class SecurityConfig {
                 .authenticationEntryPoint(unauthorizedHandler) 
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/users/register", "/api/users/login").permitAll()
+                .requestMatchers(
+                        "/api/users/register",
+                        "/api/users/login",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/api-docs/**",
+                        "/v3/api-docs/**"
+                ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                 .requestMatchers("/api/cart/**").hasRole("CUSTOMER")
                 .requestMatchers("/api/orders/**").hasAnyRole("CUSTOMER", "ADMIN")

@@ -22,16 +22,22 @@ import com.ecommerce.ecommerce_backend.dto.response.ApiResponse;
 import com.ecommerce.ecommerce_backend.dto.response.ProductResponseDTO;
 import com.ecommerce.ecommerce_backend.service.ProductService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/products")
+@Tag(name = "Product Management", description = "Public product browsing with pagination and filtering. Admin-only create, update, delete.")
 public class ProductController {
 
     @Autowired
     private ProductService productService;
 
     // create Product(Admin only)
+    @Operation(summary = "Create a product (Admin only)",
+               security = @SecurityRequirement(name = "BearerAuth"))
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProductResponseDTO>> createProduct(@Valid @RequestBody ProductRequestDTO request) {
@@ -41,6 +47,8 @@ public class ProductController {
     }
 
     // Update Product(Admin only)
+    @Operation(summary = "Update a product (Admin only)",
+               security = @SecurityRequirement(name = "BearerAuth"))
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ProductResponseDTO>> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequestDTO request) {
@@ -51,6 +59,8 @@ public class ProductController {
     }
 
     // Delete Product(Admin only)
+    @Operation(summary = "Delete a product (Admin only)",
+               security = @SecurityRequirement(name = "BearerAuth"))
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
@@ -61,6 +71,8 @@ public class ProductController {
     }
 
     // get Product by ID (Public)
+    @Operation(summary = "Get product by ID",
+               description = "Public endpoint — no token required.")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductResponseDTO>> getProductById(@PathVariable Long id) {
         ProductResponseDTO response = productService.getProductById(id);
@@ -69,6 +81,15 @@ public class ProductController {
     }
 
     // Get All Products with optional filters (Public)
+    @Operation(summary = "Get all products",
+               description = """
+                       Public endpoint — no token required.
+                       Supports pagination and optional filters:
+                       - `category` — filter by category name (case-insensitive)
+                       - `minPrice` / `maxPrice` — filter by price range
+                       - `page`, `size` — pagination (default: page=0, size=10)
+                       - `sortBy`, `sortDir` — sorting (default: id, asc)
+                       """)
     @GetMapping()
     public ResponseEntity<ApiResponse<Page<ProductResponseDTO>>> getAllProducts(
             @RequestParam(required = false) String category,
