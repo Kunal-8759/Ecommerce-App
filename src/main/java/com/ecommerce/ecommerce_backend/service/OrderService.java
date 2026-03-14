@@ -102,11 +102,6 @@ public class OrderService {
         order.setOrderItems(orderItems);
         Order savedOrder = orderRepository.save(order);
 
-        // 6. Clear the cart after successful order creation
-        cart.getCartItems().clear();
-        cart.setTotalPrice(BigDecimal.ZERO);
-        cartRepository.save(cart);
-
         return mapToOrderResponseDTO(savedOrder); 
     }
 

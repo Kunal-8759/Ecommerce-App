@@ -1,5 +1,6 @@
 package com.ecommerce.ecommerce_backend.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Random;
 
@@ -18,6 +19,7 @@ import com.ecommerce.ecommerce_backend.entity.User;
 import com.ecommerce.ecommerce_backend.exception.InsufficientStockException;
 import com.ecommerce.ecommerce_backend.exception.ResourceNotFoundException;
 import com.ecommerce.ecommerce_backend.exception.UnauthorizedAccessException;
+import com.ecommerce.ecommerce_backend.repository.CartRepository;
 import com.ecommerce.ecommerce_backend.repository.OrderRepository;
 import com.ecommerce.ecommerce_backend.repository.ProductRepository;
 import com.ecommerce.ecommerce_backend.repository.UserRepository;
@@ -34,6 +36,9 @@ public class PaymentService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CartRepository cartRepository;
 
     //  Get logged-in User from SecurityContext 
     private User getLoggedInUser() {
@@ -132,6 +137,14 @@ public class PaymentService {
                 product.setStock(newStock);
                 productRepository.save(product);
             }
+
+            // Clear cart ONLY after confirmed payment success — ensures we don't lose cart data if payment fails
+            cartRepository.findByUserId(order.getUser().getId())
+                    .ifPresent(cart -> {
+                        cart.getCartItems().clear();
+                        cart.setTotalPrice(BigDecimal.ZERO);
+                        cartRepository.save(cart);
+                    });
 
             response.setPaymentStatus(PaymentStatus.SUCCESS.name());
             response.setOrderStatus(order.getOrderStatus().name());
