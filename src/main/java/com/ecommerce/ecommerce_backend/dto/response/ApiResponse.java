@@ -31,7 +31,12 @@ public class ApiResponse<T> {
     }
 
     public static <T> ApiResponse<T> error(int status, String message) {
-    return new ApiResponse<>(false, status, message, null);
+        return new ApiResponse<>(false, status, message, null);
+    }
+
+    // Error response WITH data (e.g. validation field errors)
+    public static <T> ApiResponse<T> error(int status, String message, T data) {
+        return new ApiResponse<>(false, status, message, data);
     }
 
 }
