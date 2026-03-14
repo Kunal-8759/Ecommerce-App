@@ -40,6 +40,9 @@ public class PaymentService {
     @Autowired
     private CartRepository cartRepository;
 
+    @Autowired
+    private EmailService emailService;
+
     //  Get logged-in User from SecurityContext 
     private User getLoggedInUser() {
         String email = SecurityContextHolder
@@ -145,6 +148,9 @@ public class PaymentService {
                         cart.setTotalPrice(BigDecimal.ZERO);
                         cartRepository.save(cart);
                     });
+
+            // Send order confirmation email — async, won't block response
+            emailService.sendOrderConfirmationEmail(order);
 
             response.setPaymentStatus(PaymentStatus.SUCCESS.name());
             response.setOrderStatus(order.getOrderStatus().name());
