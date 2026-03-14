@@ -11,6 +11,7 @@ import com.ecommerce.ecommerce_backend.dto.request.PaymentRequestDTO;
 import com.ecommerce.ecommerce_backend.dto.response.PaymentResponseDTO;
 import com.ecommerce.ecommerce_backend.entity.Order;
 import com.ecommerce.ecommerce_backend.entity.OrderItem;
+import com.ecommerce.ecommerce_backend.entity.OrderStatus;
 import com.ecommerce.ecommerce_backend.entity.PaymentStatus;
 import com.ecommerce.ecommerce_backend.entity.Product;
 import com.ecommerce.ecommerce_backend.entity.User;
@@ -81,6 +82,16 @@ public class PaymentService {
         if (order.getPaymentStatus() == PaymentStatus.FAILED) {
             throw new IllegalStateException(
                     "This order's payment has failed. Please place a new order.");
+        }
+
+        // 4. Check if payment deadline has passed
+        if (LocalDateTime.now().isAfter(order.getPaymentDeadline())) {
+            // Mark as CANCELLED since deadline passed
+            order.setOrderStatus(OrderStatus.CANCELLED);
+            order.setPaymentStatus(PaymentStatus.FAILED);
+            orderRepository.save(order);
+            throw new IllegalStateException(
+                    "Payment deadline has passed for order id: " + orderId + ". Please place a new order.");
         }
 
         // 4. Validate stock again just before payment

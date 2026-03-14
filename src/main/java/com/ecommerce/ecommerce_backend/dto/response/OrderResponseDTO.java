@@ -15,6 +15,7 @@ public class OrderResponseDTO {
     private List<OrderItemResponseDTO> orderItems;
     private BigDecimal totalAmount;
     private LocalDateTime orderDate;
+    private LocalDateTime paymentDeadline;  // show customer the deadline
     private String paymentStatus;
     private String paymentMethod;
     private String orderStatus;

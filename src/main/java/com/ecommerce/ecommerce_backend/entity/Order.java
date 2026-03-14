@@ -54,6 +54,11 @@ public class Order {
     @Column(nullable = false)
     private LocalDateTime orderDate;
 
+    // Deadline by which customer must complete payment
+    // Auto-set to 10 minutes after order creation
+    @Column(nullable = false)
+    private LocalDateTime paymentDeadline;
+
     // Starts as PENDING, updated after payment simulation
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -72,6 +77,7 @@ public class Order {
     @PrePersist
     public void prePersist() {
         this.orderDate = LocalDateTime.now();
+        this.paymentDeadline = LocalDateTime.now().plusMinutes(10);
         this.paymentStatus = PaymentStatus.PENDING;
         this.orderStatus = OrderStatus.PLACED;
     }

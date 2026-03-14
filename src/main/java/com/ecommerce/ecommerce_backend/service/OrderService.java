@@ -161,6 +161,7 @@ public class OrderService {
         dto.setCustomerEmail(order.getUser().getEmail());
         dto.setTotalAmount(order.getTotalAmount());
         dto.setOrderDate(order.getOrderDate());
+        dto.setPaymentDeadline(order.getPaymentDeadline());
         dto.setPaymentStatus(order.getPaymentStatus().name());
         dto.setPaymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null );
         dto.setOrderStatus(order.getOrderStatus().name());
