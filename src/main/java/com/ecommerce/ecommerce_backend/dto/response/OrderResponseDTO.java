@@ -16,5 +16,7 @@ public class OrderResponseDTO {
     private BigDecimal totalAmount;
     private LocalDateTime orderDate;
     private String paymentStatus;
+    private String paymentMethod;
     private String orderStatus;
+
 }

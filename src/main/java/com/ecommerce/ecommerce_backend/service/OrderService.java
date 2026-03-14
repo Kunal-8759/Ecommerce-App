@@ -162,6 +162,7 @@ public class OrderService {
         dto.setTotalAmount(order.getTotalAmount());
         dto.setOrderDate(order.getOrderDate());
         dto.setPaymentStatus(order.getPaymentStatus().name());
+        dto.setPaymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null );
         dto.setOrderStatus(order.getOrderStatus().name());
 
         List<OrderItemResponseDTO> itemDTOs = order.getOrderItems()
