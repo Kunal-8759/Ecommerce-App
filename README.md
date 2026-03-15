@@ -510,7 +510,7 @@ Every API — success or error — returns this structure:
  
 ## 🗄 Database Schema
  
-![Database Schema Diagram](https://i.imgur.com/your-diagram-link.png)
+![Database Schema Diagram](images\Db-design.png)
  
 
  
