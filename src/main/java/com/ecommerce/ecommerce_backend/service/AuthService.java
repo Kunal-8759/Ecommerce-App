@@ -1,6 +1,8 @@
 package com.ecommerce.ecommerce_backend.service;
 
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,6 +23,8 @@ import com.ecommerce.ecommerce_backend.utils.JwtUtil;
 @Service
 public class AuthService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
     @Autowired
     private AuthenticationManager authenticationManager;
 
@@ -37,8 +41,10 @@ public class AuthService {
     private JwtUtil jwtUtil;
 
     public UserResponseDTO registerUser(RegisterRequestDTO request){
+        log.info("Registration attempt for email: {}", request.getEmail());
         // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
+            log.warn("Registration failed — email already registered: {}", request.getEmail());
             throw new DuplicateResourceException("Email already registered: " + request.getEmail());
         }
 
@@ -49,19 +55,27 @@ public class AuthService {
         user.setRole(Role.CUSTOMER); // default role : CUSTOMER
 
         User savedUser = userRepository.save(user);
+        log.info("User registered successfully — id: {}, email: {}", savedUser.getId(), savedUser.getEmail());
         //convert entity to dto to hide in response
         return modelMapper.map(savedUser , UserResponseDTO.class);
     }
 
     public AuthResponseDTO login(LoginRequestDTO request) {
+        log.info("Login attempt for email: {}", request.getEmail());
+
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            .orElseThrow(() ->{
+                log.warn("Login failed — user not found with email: {}", request.getEmail());
+                return new ResourceNotFoundException("User not found with email: " + request.getEmail());
+            });
 
         String token = jwtUtil.generateToken(user);
+        log.info("Login successful — email: {}, role: {}", user.getEmail(), user.getRole());
+
         return new AuthResponseDTO(token, user.getEmail(), user.getRole().name());
     }
 

@@ -3,6 +3,8 @@ package com.ecommerce.ecommerce_backend.service;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -19,6 +21,8 @@ import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class EmailService {
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+
     @Autowired
     private JavaMailSender mailSender;
 
@@ -39,6 +43,9 @@ public class EmailService {
     @Async
     public void sendOrderConfirmationEmail(Order order) {
 
+        log.info("Preparing to send order confirmation email — orderId: {}, userId: {}, email: {}",
+                order.getId(), order.getUser().getId(), order.getUser().getEmail());
+
         try {
             String orderDate = order.getOrderDate().format(DATE_FORMATTER);
 
@@ -56,13 +63,12 @@ public class EmailService {
 
             mailSender.send(message);
 
-            System.out.println("[EmailService] Confirmation sent to: "
-                    + order.getUser().getEmail()
-                    + " | Order ID: " + order.getId());
+            log.info("Order confirmation email sent successfully — orderId: {}, email: {}",
+                    order.getId(), order.getUser().getEmail());
 
         } catch (Exception e) {
             // Email failure must never crash the payment flow
-            System.err.println("[EmailService] Failed to send email for Order ID: " + order.getId() + " | Error: " + e.getMessage());
+            log.error("Failed to send order confirmation email — orderId: {}, email: {}", order.getId(), order.getUser().getEmail(), e);
         }
     }
 }

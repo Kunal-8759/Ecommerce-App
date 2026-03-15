@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,8 @@ import com.ecommerce.ecommerce_backend.repository.UserRepository;
 
 @Service
 public class CartService {
+
+    private static final Logger log = LoggerFactory.getLogger(CartService.class);
 
     @Autowired
     private CartRepository cartRepository;
@@ -49,8 +53,12 @@ public class CartService {
                 .getAuthentication()
                 .getName(); // getName() returns the email (set as principal in JwtAuthFilter)
 
+        log.debug("Resolving logged-in user from SecurityContext — email: {}", email);
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Logged in user not found"));
+                .orElseThrow(() ->{
+                    log.warn("Logged-in user not found with email: {}", email);
+                    return new ResourceNotFoundException("Logged-in user not found with email: " + email);
+                });
     }
     /*
     Get or Create Cart for logged-in user
@@ -62,6 +70,7 @@ public class CartService {
     private Cart getOrCreateCart(User user) {
         return cartRepository.findByUserId(user.getId())
                 .orElseGet(() -> {
+                    log.info("No existing cart found for user id: {}. Creating new cart.", user.getId());
                     Cart newCart = new Cart();
                     newCart.setUser(user);
                     newCart.setTotalPrice(BigDecimal.ZERO);
@@ -83,6 +92,8 @@ public class CartService {
 
         cart.setTotalPrice(total);
         cartRepository.save(cart);
+
+        log.debug("Cart total recalculated — cartId: {}, newTotal: {}", cart.getId(), total);
     }
 
     /*
@@ -97,13 +108,22 @@ public class CartService {
         User user = getLoggedInUser();
         Cart cart = getOrCreateCart(user);
 
+        log.debug("Adding to cart — userId: {}, productId: {}, requestedQty: {}",
+                user.getId(), request.getProductId(), request.getQuantity());
+
         Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + request.getProductId()));
+                .orElseThrow(() ->{
+                    log.warn("Add to cart failed — product not found with id: {}", request.getProductId());
+                    return new ResourceNotFoundException("Product not found with id: " + request.getProductId());
+                });
 
         // Check stock availability before adding
         if (product.getStock() < request.getQuantity()) {
+            log.warn("Insufficient stock for product id: {} — available: {}, requested: {}",
+                product.getId(), product.getStock(), request.getQuantity());
             throw new InsufficientStockException("Insufficient stock for '" + product.getName() + "'. Available: " + product.getStock());
         }
+
 
         // If product already in cart → just increase quantity
         // If not → create a new CartItem
@@ -116,18 +136,33 @@ public class CartService {
 
             // Re-check stock for the updated combined quantity
             if (product.getStock() < updatedQty) {
+                log.warn("Cannot add to cart — insufficient stock for product id: {} after quantity update. Available: {}, requested: {}",
+                    product.getId(), product.getStock(), updatedQty);
                 throw new InsufficientStockException("Cannot add more. Insufficient stock for '" + product.getName() + "'. Available: " + product.getStock());
             }
             cartItem.setQuantity(updatedQty);
+
+            log.info("Cart item quantity increased — userId: {}, productId: {}, " +
+                    "oldQty: {}, newQty: {}",
+                    user.getId(), product.getId(),
+                    cartItem.getQuantity() - request.getQuantity(), updatedQty);
         } else {
             cartItem = new CartItem();
             cartItem.setCart(cart);
             cartItem.setProduct(product);
             cartItem.setQuantity(request.getQuantity());
             cart.getCartItems().add(cartItem);
+
+            log.info("New item added to cart — userId: {}, productId: {}, " +
+                    "productName: {}, quantity: {}",
+                    user.getId(), product.getId(),
+                    product.getName(), request.getQuantity());
         }
 
         cartItemRepository.save(cartItem);
+        log.info("Product added to cart — userId: {}, productId: {}, quantity: {}",
+            user.getId(), product.getId(), request.getQuantity());
+
         recalculateTotal(cart);
 
         return mapToCartResponseDTO(cart);
@@ -147,21 +182,32 @@ public class CartService {
         User user = getLoggedInUser();
         Cart cart = getOrCreateCart(user);
 
+        log.debug("Updating cart item — userId: {}, productId: {}, newQty: {}",
+                user.getId(), productId, request.getQuantity());
+
         CartItem cartItem = cartItemRepository
                 .findByCartIdAndProductId(cart.getId(), productId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found in cart. Add it first."));
+                .orElseThrow(() -> {
+                    log.warn("Product not found in cart — userId: {}, productId: {}", user.getId(), productId);
+                    return new ResourceNotFoundException("Product not found in cart. Add it first.");
+                });
 
         Product product = cartItem.getProduct();
 
         // Validate new quantity against stock
         if (product.getStock() < request.getQuantity()) {
+            log.warn("Insufficient stock for product id: {} — available: {}, requested: {}",
+                product.getId(), product.getStock(), request.getQuantity());
             throw new InsufficientStockException("Insufficient stock for '" + product.getName() + "'. Available: " + product.getStock());
         }
 
         cartItem.setQuantity(request.getQuantity());
         cartItemRepository.save(cartItem);
         recalculateTotal(cart);
+
+        log.info("Cart item quantity updated — userId: {}, productId: {}, " +
+                "newQty: {}",
+                user.getId(), product.getId(), request.getQuantity());
 
         return mapToCartResponseDTO(cart);
     }
@@ -179,14 +225,22 @@ public class CartService {
         User user = getLoggedInUser();
         Cart cart = getOrCreateCart(user);
 
+        log.debug("Removing item from cart — userId: {}, productId: {}",
+                user.getId(), productId);
+
         CartItem cartItem = cartItemRepository
                 .findByCartIdAndProductId(cart.getId(), productId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Product not found in cart"));
+                .orElseThrow(() -> {
+                    log.warn("Product not found in cart — userId: {}, productId: {}", user.getId(), productId);
+                    return new ResourceNotFoundException("Product not found in cart");
+                });
 
         cart.getCartItems().remove(cartItem);
         cartItemRepository.delete(cartItem);
         recalculateTotal(cart);
+
+        log.info("Product removed from cart — userId: {}, productId: {}",
+                user.getId(), productId);
 
         return mapToCartResponseDTO(cart);
     }
@@ -199,6 +253,9 @@ public class CartService {
     */
     public CartResponseDTO getMyCart() {
         User user = getLoggedInUser();
+
+        log.debug("Fetching cart for userId: {}", user.getId());
+
         Cart cart = getOrCreateCart(user);
         return mapToCartResponseDTO(cart);
     }
@@ -210,9 +267,15 @@ public class CartService {
         - Save the updated cart.
     */
     public void clearCart(Cart cart) {
+
+        log.info("Clearing cart after successful payment — cartId: {}, userId: {}",
+                cart.getId(), cart.getUser().getId());
+
         cart.getCartItems().clear();
         cart.setTotalPrice(BigDecimal.ZERO);
         cartRepository.save(cart);
+
+        log.info("Cart cleared successfully — cartId: {}", cart.getId());
     }
 
     /*

@@ -5,8 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +29,9 @@ import jakarta.transaction.Transactional;
 
 @Service
 public class OrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
+
     @Autowired
     private OrderRepository orderRepository;
 
@@ -44,8 +48,13 @@ public class OrderService {
                 .getAuthentication()
                 .getName();
 
+        log.debug("Resolving logged-in user — email: {}", email);
+
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Logged in user not found"));
+                .orElseThrow(() ->{
+                    log.warn("Logged-in user not found with email: {}", email);
+                    return new ResourceNotFoundException("Logged in user not found");
+                });
     }
 
     /*  
@@ -65,18 +74,30 @@ public class OrderService {
     public OrderResponseDTO checkout() {
         User user = getLoggedInUser();
 
+        log.info("Checkout initiated — userId: {}", user.getId());
+
         // 1. Get the user's cart
         Cart cart = cartRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Cart not found. Add items before checkout."));
+                .orElseThrow(() -> {
+                    log.warn("Cart not found for user — userId: {}", user.getId());
+                    return new ResourceNotFoundException("Cart not found. Add items before checkout.");
+                });
 
         // 2. Cart must not be empty
         if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+            log.warn("Cart is empty for user — userId: {}", user.getId());
             throw new IllegalStateException("Cart is empty. Add items before checkout.");
         }
+
+        log.debug("Validating stock for {} cart item(s) — userId: {}",
+                cart.getCartItems().size(), user.getId());
 
         // 3. Validate stock for ALL items before creating anything
         for (CartItem cartItem : cart.getCartItems()) {
             if (cartItem.getProduct().getStock() < cartItem.getQuantity()) {
+                log.warn("Insufficient stock for product — userId: {}, productId: {}, available: {}, requested: {}",
+                        user.getId(), cartItem.getProduct().getId(),
+                        cartItem.getProduct().getStock(), cartItem.getQuantity());
                 throw new InsufficientStockException("Insufficient stock for '" + cartItem.getProduct().getName()+ "'. Available: " + cartItem.getProduct().getStock() + ", Requested: " + cartItem.getQuantity());
             }
         }
@@ -102,6 +123,14 @@ public class OrderService {
         order.setOrderItems(orderItems);
         Order savedOrder = orderRepository.save(order);
 
+        log.info("Order placed successfully — orderId: {}, userId: {}, " +
+                "items: {}, totalAmount: {}, paymentDeadline: {}",
+                savedOrder.getId(),
+                user.getId(),
+                savedOrder.getOrderItems().size(),
+                savedOrder.getTotalAmount(),
+                savedOrder.getPaymentDeadline());
+
         return mapToOrderResponseDTO(savedOrder); 
     }
 
@@ -109,7 +138,12 @@ public class OrderService {
     // CUSTOMER : Get My Order History 
     public List<OrderResponseDTO> getMyOrders() {
         User user = getLoggedInUser();
+        log.debug("Fetching order history for userId: {}", user.getId());
+
         List<Order> orders = orderRepository.findByUserIdOrderByOrderDateDesc(user.getId());
+
+        log.debug("Order history fetched — userId: {}, totalOrders: {}",
+                user.getId(), orders.size());
 
         return orders.stream()
                 .map(this::mapToOrderResponseDTO)
@@ -120,11 +154,17 @@ public class OrderService {
     public OrderResponseDTO getOrderById(Long orderId) {
         User user = getLoggedInUser();
 
+        log.debug("Fetching order — orderId: {}, requestedBy userId: {}",
+                orderId, user.getId());
+
         Order order = orderRepository.findById(orderId)
                     .orElseThrow(() -> new ResourceNotFoundException( "Order not found with id: " + orderId));
 
         // If customer, ensure they own this order
         if (user.getRole().name().equals("CUSTOMER") && !order.getUser().getId().equals(user.getId())) {
+            log.warn("Unauthorized order access attempt — " +
+                    "requestingUserId: {}, orderOwnerUserId: {}, orderId: {}",
+                    user.getId(), order.getUser().getId(), orderId);
             throw new ResourceNotFoundException("Order not found with id: " + orderId);
         }
 
@@ -133,17 +173,27 @@ public class OrderService {
 
     //  ADMIN : Update Order Status
     public OrderResponseDTO updateOrderStatus(Long orderId,UpdateOrderStatusRequestDTO request) {
+        log.info("Admin updating order status — orderId: {}, requestedStatus: {}",
+                orderId, request.getOrderStatus());
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+                .orElseThrow(() -> {
+                    log.warn("Order not found for status update — orderId: {}", orderId);
+                    return new ResourceNotFoundException("Order not found with id: " + orderId);
+                });
 
         // Business rule: cannot change status of a CANCELLED order
         if (order.getOrderStatus().name().equals("CANCELLED")) {
+            log.warn("Status update blocked — order is already CANCELLED. orderId: {}", orderId);
             throw new IllegalStateException("Cannot update status of a cancelled order");
         }
 
         order.setOrderStatus(request.getOrderStatus());
         Order updated = orderRepository.save(order);
+
+        log.info("Order status updated successfully — orderId: {}, newStatus: {}",
+                orderId, request.getOrderStatus());
+
         return mapToOrderResponseDTO(updated);
     }
 

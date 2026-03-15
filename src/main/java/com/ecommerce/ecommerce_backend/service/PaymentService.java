@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Random;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,9 @@ import jakarta.transaction.Transactional;
 
 @Service
 public class PaymentService {
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
+
     @Autowired
     private OrderRepository orderRepository;
 
@@ -50,8 +55,13 @@ public class PaymentService {
                 .getAuthentication()
                 .getName();
 
+        log.debug("Resolving logged-in user — email: {}", email);
+
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Logged in user not found"));
+                .orElseThrow(() -> {
+                    log.warn("Logged in user not found — email: {}", email);
+                    return new ResourceNotFoundException("Logged in user not found");
+                });
     }
 
 
@@ -72,28 +82,42 @@ public class PaymentService {
 
         User user = getLoggedInUser();
 
+        log.info("Payment initiated — orderId: {}, userId: {}, method: {}",
+                orderId, user.getId(), request.getPaymentMethod());
+
         // 1. Find the order
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+                .orElseThrow(() -> {
+                    log.warn("Order not found for payment processing — orderId: {}", orderId);
+                    return new ResourceNotFoundException("Order not found with id: " + orderId);
+                });
 
         // 2. Security check — customer can only pay for their own order
         if (!order.getUser().getId().equals(user.getId())) {
+            log.warn("Unauthorized payment attempt — userId: {}, orderOwnerId: {}, orderId: {}",
+                    user.getId(), order.getUser().getId(), orderId);
             throw new UnauthorizedAccessException("You are not authorized to process payment for this order");
         }
 
         // 3. Prevent re-payment — only PENDING orders can be paid
         if (order.getPaymentStatus() == PaymentStatus.SUCCESS) {
+            log.warn("Payment already completed for order id: {}", orderId);
             throw new IllegalStateException(
                     "Payment already completed for order id: " + orderId);
         }
 
         if (order.getPaymentStatus() == PaymentStatus.FAILED) {
+            log.warn("Failed payment attempt for order id: {}", orderId);
             throw new IllegalStateException(
                     "This order's payment has failed. Please place a new order.");
         }
 
         // 4. Check if payment deadline has passed
         if (LocalDateTime.now().isAfter(order.getPaymentDeadline())) {
+            log.warn("Payment blocked — deadline passed. " +
+                    "orderId: {}, deadline: {}, attemptedAt: {}",
+                    orderId, order.getPaymentDeadline(), LocalDateTime.now());
+
             // Mark as CANCELLED since deadline passed
             order.setOrderStatus(OrderStatus.CANCELLED);
             order.setPaymentStatus(PaymentStatus.FAILED);
@@ -102,11 +126,19 @@ public class PaymentService {
                     "Payment deadline has passed for order id: " + orderId + ". Please place a new order.");
         }
 
+        log.debug("Re-validating stock before payment — orderId: {}", orderId);
+
         // 4. Validate stock again just before payment
         // Stock could have changed between checkout and payment time
         for (OrderItem orderItem : order.getOrderItems()) {
             Product product = orderItem.getProduct();
             if (product.getStock() < orderItem.getQuantity()) {
+                log.warn("Payment blocked — stock depleted since checkout. " +
+                         "orderId: {}, productId: {}, productName: {}, " +
+                         "available: {}, required: {}",
+                        orderId, product.getId(), product.getName(),
+                        product.getStock(), orderItem.getQuantity());
+
                 // Mark payment as failed and save — stock ran out
                 order.setPaymentStatus(PaymentStatus.FAILED);
                 order.setPaymentMethod(request.getPaymentMethod());
@@ -121,6 +153,9 @@ public class PaymentService {
 
         // 6. Simulate payment
         boolean paymentSuccessful = simulatePaymentGateway();
+
+        log.debug("Payment gateway simulation result — orderId: {}, success: {}",
+                orderId, paymentSuccessful);
 
         PaymentResponseDTO response = new PaymentResponseDTO();
         response.setOrderId(orderId);
@@ -139,6 +174,11 @@ public class PaymentService {
                 int newStock = product.getStock() - orderItem.getQuantity();
                 product.setStock(newStock);
                 productRepository.save(product);
+
+                log.info("Stock reduced — productId: {}, productName: {}, " +
+                         " reducedBy: {}, newStock: {}",
+                        product.getId(), product.getName(),
+                        orderItem.getQuantity(), newStock);
             }
 
             // Clear cart ONLY after confirmed payment success — ensures we don't lose cart data if payment fails
@@ -152,6 +192,11 @@ public class PaymentService {
             // Send order confirmation email — async, won't block response
             emailService.sendOrderConfirmationEmail(order);
 
+            log.info("Payment SUCCESS — orderId: {}, userId: {}, " +
+                     "amount: {}, method: {}",
+                    orderId, user.getId(),
+                    order.getTotalAmount(), request.getPaymentMethod());
+
             response.setPaymentStatus(PaymentStatus.SUCCESS.name());
             response.setOrderStatus(order.getOrderStatus().name());
             response.setMessage("Payment successful! Your order has been confirmed. " +"Order ID: " + orderId);
@@ -160,6 +205,11 @@ public class PaymentService {
             // Stock is NOT reduced — order stays PLACED but payment FAILED
             order.setPaymentStatus(PaymentStatus.FAILED);
             orderRepository.save(order);
+
+            log.warn("Payment FAILED (gateway simulation) — orderId: {}, userId: {}, " +
+                     "amount: {}, method: {}",
+                    orderId, user.getId(),
+                    order.getTotalAmount(), request.getPaymentMethod());
 
             response.setPaymentStatus(PaymentStatus.FAILED.name());
             response.setOrderStatus(order.getOrderStatus().name());
@@ -173,11 +223,18 @@ public class PaymentService {
     public PaymentResponseDTO getPaymentStatus(Long orderId) {
         User user = getLoggedInUser();
 
+        log.debug("Payment status check — orderId: {}, userId: {}", orderId, user.getId());
+
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+                .orElseThrow(() -> {
+                    log.warn("Order not found for payment status check — orderId: {}", orderId);
+                    return new ResourceNotFoundException("Order not found with id: " + orderId);
+                });
 
         // Customer can only check their own order's payment
         if (!order.getUser().getId().equals(user.getId())) {
+            log.warn("Unauthorized payment status access attempt — userId: {}, orderOwnerId: {}, orderId: {}",
+                    user.getId(), order.getUser().getId(), orderId);
             throw new UnauthorizedAccessException("You are not authorized to view payment for this order");
         }
 
