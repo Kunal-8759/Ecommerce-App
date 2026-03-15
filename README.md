@@ -129,11 +129,11 @@ Checkout → Order PENDING (paymentDeadline = now + 10 min)
  
 ## 🚀 Getting Started
  
-There are two ways to run this project. Choose one.
+- There are two ways to run this project. Choose one.
 ---
-## Option 1 — Run with Docker (Recommended)
-**You only need Docker Desktop. Nothing else — no Java, no MySQL, no Maven.**
-Docker will set up everything inside containers automatically.
+### Option 1 — Run with Docker (Recommended)
+ - You only need Docker Desktop. Nothing else — no Java, no MySQL, no Maven.
+ - Docker will set up everything inside containers automatically.
 ---
 ### Step 1 — Install Docker Desktop
 Download and install from: https://www.docker.com/products/docker-desktop
@@ -379,7 +379,7 @@ logging.file.name=logs/ecommerce.log
 ---
  
 ### Step 7 — Run the Application
-Open the Spring Boot application class `EcommerceBackendApplication.java` and run it. The first startup will take a few minutes as it downloads dependencies and sets up the database. You should see logs indicating successful startup and database connection.
+ - Open the Spring Boot application class `EcommerceBackendApplication.java` and run it. The first startup will take a few minutes as it downloads dependencies and sets up the database. You should see logs indicating successful startup and database connection.
 ---
  
 ### Step 8 — Verify It's Running
@@ -510,7 +510,7 @@ Every API — success or error — returns this structure:
  
 ## 🗄 Database Schema
  
-![Database Schema Diagram](https://i.imgur.com/your-diagram-link.png)
+![Database Schema Diagram]()
  
 
  
