@@ -7672,3 +7672,13 @@ Caused by: java.sql.SQLException: Access denied for user 'root'@'172.18.0.3' (us
 2026-03-15 11:58:15 [main] WARN  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
 2026-03-15 11:58:15 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
 2026-03-15 11:58:17 [main] INFO  c.e.e.EcommerceBackendApplication - Started EcommerceBackendApplication in 18.758 seconds (process running for 20.82)
+2026-03-15 12:01:29 [http-nio-8080-exec-6] INFO  c.e.e.service.AuthService - Registration attempt for email: sundaramkumar4649@gmail.com
+2026-03-15 12:01:30 [http-nio-8080-exec-6] INFO  c.e.e.service.AuthService - User registered successfully — id: 1, email: sundaramkumar4649@gmail.com
+2026-03-15 12:02:05 [http-nio-8080-exec-5] INFO  c.e.e.service.AuthService - Login attempt for email: sundaramkumar4649@gmail.com
+2026-03-15 12:02:15 [http-nio-8080-exec-7] INFO  c.e.e.service.AuthService - Login attempt for email: sundaramkumar4649@gmail.com
+2026-03-15 12:02:16 [http-nio-8080-exec-7] INFO  c.e.e.service.AuthService - Login successful — email: sundaramkumar4649@gmail.com, role: CUSTOMER
+2026-03-15 12:02:37 [http-nio-8080-exec-8] INFO  c.e.e.service.ProductService - Fetching products with filters — category: null, price: null-null, page: 0, size: 10, sortBy: id, sortDir: asc
+2026-03-15 12:02:37 [http-nio-8080-exec-8] WARN  o.s.d.w.c.SpringDataJacksonConfiguration$PageModule$WarningLoggingModifier - Serializing PageImpl instances as-is is not supported, meaning that there is no guarantee about the stability of the resulting JSON structure!
+	For a stable JSON structure, please use Spring Data's PagedModel (globally via @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO))
+	or Spring HATEOAS and Spring Data's PagedResourcesAssembler as documented in https://docs.spring.io/spring-data/commons/reference/repositories/core-extensions.html#core.web.pageables.
+
