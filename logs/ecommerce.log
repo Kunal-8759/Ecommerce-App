@@ -1167,3 +1167,9 @@ io.jsonwebtoken.security.SignatureException: JWT signature does not match locall
 2026-03-16 15:29:03 [http-nio-8080-exec-7] INFO  c.e.e.service.AuthService - Login successful — email: w.kumarkunal@gmail.com, role: CUSTOMER
 2026-03-16 15:31:43 [http-nio-8080-exec-3] INFO  c.e.e.service.UserService - Updating user with id: 1
 2026-03-16 15:31:43 [http-nio-8080-exec-3] INFO  c.e.e.service.UserService - User updated successfully with id: 1
+2026-03-16 16:08:53 [main] INFO  c.e.e.EcommerceBackendApplication - Starting EcommerceBackendApplication v0.0.1-SNAPSHOT using Java 17.0.18 with PID 1 (/app/app.jar started by root in /app)
+2026-03-16 16:08:53 [main] INFO  c.e.e.EcommerceBackendApplication - No active profile set, falling back to 1 default profile: "default"
+2026-03-16 16:09:52 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-03-16 16:19:24 [main] INFO  c.e.e.EcommerceBackendApplication - Starting EcommerceBackendApplication v0.0.1-SNAPSHOT using Java 17.0.18 with PID 1 (/app/app.jar started by root in /app)
+2026-03-16 16:19:24 [main] INFO  c.e.e.EcommerceBackendApplication - No active profile set, falling back to 1 default profile: "default"
+2026-03-16 16:19:34 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
