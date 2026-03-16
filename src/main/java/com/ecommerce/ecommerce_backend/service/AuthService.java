@@ -15,6 +15,7 @@ import com.ecommerce.ecommerce_backend.dto.response.AuthResponseDTO;
 import com.ecommerce.ecommerce_backend.dto.response.UserResponseDTO;
 import com.ecommerce.ecommerce_backend.entity.Role;
 import com.ecommerce.ecommerce_backend.entity.User;
+import com.ecommerce.ecommerce_backend.exception.BadCredentialsException;
 import com.ecommerce.ecommerce_backend.exception.DuplicateResourceException;
 import com.ecommerce.ecommerce_backend.exception.ResourceNotFoundException;
 import com.ecommerce.ecommerce_backend.repository.UserRepository;
@@ -63,6 +64,15 @@ public class AuthService {
     public AuthResponseDTO login(LoginRequestDTO request) {
         log.info("Login attempt for email: {}", request.getEmail());
 
+        // i want to check here if authenticated or not and if not then i want to throw my custom exception which will be handled by global exception handler and return 401 with message "Invalid email or password"
+        try {
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+        } catch (Exception ex) {
+            log.warn("Login failed — invalid credentials for email: {}", request.getEmail());
+            throw new BadCredentialsException("Invalid email or password");
+        }
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );

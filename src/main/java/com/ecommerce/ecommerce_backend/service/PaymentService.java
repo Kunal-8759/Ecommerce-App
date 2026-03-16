@@ -254,7 +254,7 @@ public class PaymentService {
     }
 
     //  Simulate Payment Gateway 
-    // 70% chance of success — realistic for a payment simulation
+    // 95% chance of success — realistic for a payment simulation
     // In production this would be replaced with Razorpay/Stripe/PayU  call
     private boolean simulatePaymentGateway() {
         return new Random().nextInt(100) < 95;

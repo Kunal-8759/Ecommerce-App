@@ -120,6 +120,7 @@ public class UserController {
                 description = "Fetch a list of all users. Only admins can perform this action.",
                security = @SecurityRequirement(name = "BearerAuth"))
     @GetMapping()
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<UserResponseDTO>>> getAllUsers() {
         return ResponseEntity.ok(
                 ApiResponse.success(HttpStatus.OK.value(), "Users fetched successfully", userService.getAllUsers()));
